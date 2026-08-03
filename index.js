@@ -224,18 +224,20 @@ const startServer = async () => {
       standardLimiter,
       proxyService("Payment", SERVICE_URLS.payment)
     );
-    app.use(
-      "/api/v1/sessions",
-      requireAuth,
-      standardLimiter,
-      proxyService("Video", SERVICE_URLS.video)
-    );
-    app.use(
-      "/api/v1/video",
-      requireAuth,
-      standardLimiter,
-      proxyService("Video", SERVICE_URLS.video)
-    );
+
+    // app.use(
+    //   "/api/v1/sessions",
+    //   requireAuth,
+    //   standardLimiter,
+    //   proxyService("Video", SERVICE_URLS.video)
+    // );
+
+    // app.use(
+    //   "/api/v1/video",
+    //   requireAuth,
+    //   standardLimiter,
+    //   proxyService("Video", SERVICE_URLS.video)
+    // );
 
     app.get("/", (req, res) => {
       res.send("inTurn API Gateway is running 🚀");
