@@ -91,7 +91,6 @@
 
 
 
-
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -130,7 +129,12 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   })
 );
-app.use(helmet());
+
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  })
+);
 
 // --- Payment provider webhooks -------------------------------------------
 // Must be mounted BEFORE express.json() and BEFORE auth/rate-limiting.
