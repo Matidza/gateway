@@ -6,13 +6,40 @@ import UserModel from "../models/menteeModel.js";
 import MentorModel from "../models/mentorModel.js";
 import CompanyModel from "../models/companyModel.js";
 import InstitutionModel from "../models/institutionModel.js";
+import GatewayUserModel from "../models/gatewayUserModel.js";
 
 import doHash, { decryptHashedPassword } from "../utilities/hashing.js";
 import { signUpSchema, signInSchema } from "../validator/validators.js";
 
 dotenv.config();
 
+export const createUser = async (req, res) => {
+  const { name, email, avatar, role} = req.body;
+  try {
+    const userExists = await GatewayUserModel.findOne({ email});
+    if (userExists) return res.status(200).json(userExists);
+    const newUser = await GatewayUserModel.create({
+      name,
+      email,
+      avatar,
+      role
+    })
+    res.status(200).json({
+      success: true,
+      field: null,
+      message: "🎉 Your account has been created successfully",
+      newUser
+    })
+  } catch (error) {
+    console.error("SignIn Error:", error);
+    res.status(500).json({
+      success: false,
+      message: `Internal server error: ${error.message || error}`,
+    });
+  }
 
+  
+}
 
 export const signUp = async (req, res) => {
   const { email, password, role = "mentee" } = req.body;

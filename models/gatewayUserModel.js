@@ -11,15 +11,6 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
     },
 
-    password: {
-      type: String,
-      required: function () {
-        return !this.provider || this.provider === "local";
-      },
-      trim: true,
-      select: false, // ✅ Hide password from query results
-    },
-
     role: {
       type: String,
       enum: ["mentee", "mentor", "company", "institution",  "admin"],
@@ -61,6 +52,6 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-const UserModel = mongoose.model("UserModel", userSchema);
+const GatewayUserModel = mongoose.model("GatewayUserModel", userSchema);
 
-export default UserModel;
+export default GatewayUserModel;

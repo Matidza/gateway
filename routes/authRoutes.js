@@ -10,11 +10,13 @@ import {
   signUpAsMentor,
   signIn,
   signOut,
+  createUser,
 } from "../controllers/authControllers.js";
 
 const router = express.Router();
 
 // 🔐 AUTHENTICATION ROUTES
+router.post("/create-user", createUser);
 router.post("/signin", signIn);
 router.post("/signout", signOut);
 
