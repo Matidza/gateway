@@ -12,210 +12,10 @@ import { signUpSchema, signInSchema } from "../validator/validators.js";
 
 dotenv.config();
 
-export const createMenteeUser = async (request, response) => {
-  try {
-    const { name, email, avatar, user_type = "mentee" } = request.body;
 
-    const userExists = await UserModel.findOne({ email });
-
-    if (userExists) {
-      // create Access and refresh Tokens when user LogsIn and send via cookies
-      // Step 4: Generate tokens
-      const accessToken = jwt.sign(
-        {
-          user: userExists._id,
-          name: userExists.name,
-          email: userExists.email,
-          user_type: userExists.user_type, // use detected userType
-        },
-        process.env.SECRET_ACCESS_TOKEN,
-        { expiresIn: "60m" } // short-lived
-      );
-      const refreshToken = jwt.sign(
-        { userId: userExists._id },
-        process.env.SECRET_REFRESH_TOKEN,
-        { expiresIn: "7d" } // long-lived
-      );
-
-      // Step 5: Set cookies
-      response.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-      });
-      response.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
-      return response.status(200).json({
-        success: true,
-        message: `🎉 Login was successfully.Welcome back to Qasar ${userExists.email}`,
-        result: userExists,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      });
-    } 
-    
-    // If user doesnt exists
-    const newUser = await UserModel.create({
-      name,
-      email,
-      avatar,
-      user_type,
-    });
-    // create Access and refresh Tokens when user LogsIn and send via cookies
-    // Step 4: Generate tokens
-    const accessToken = jwt.sign(
-      {
-        user: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        user_type: newUser.user_type, // use detected userType
-      },
-      process.env.SECRET_ACCESS_TOKEN,
-      { expiresIn: "60m" } // short-lived
-    );
-    const refreshToken = jwt.sign(
-      { userId: newUser._id },
-      process.env.SECRET_REFRESH_TOKEN,
-      { expiresIn: "7d" } // long-lived
-    );
-
-    // Step 5: Set cookies
-    response.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    });
-    response.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    response.status(201).json({
-      success: true,
-      message: `🎉 Your account has been created successfully.Welcome to Qasar ${newUser.email}`,
-      result: newUser,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    });
-  } catch (error) {
-    response.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-export const createMentorUser = async (request, response) => {
-  try {
-    const { name, email, avatar, user_type = "mentor" } = request.body;
-
-    const userExists = await MentorModel.findOne({ email });
-
-    if (userExists) {
-      // create Access and refresh Tokens when user LogsIn and send via cookies
-      // Step 4: Generate tokens
-      const accessToken = jwt.sign(
-        {
-          user: userExists._id,
-          name: userExists.name,
-          email: userExists.email,
-          user_type: userExists.user_type, // use detected userType
-        },
-        process.env.SECRET_ACCESS_TOKEN,
-        { expiresIn: "60m" } // short-lived
-      );
-      const refreshToken = jwt.sign(
-        { userId: userExists._id },
-        process.env.SECRET_REFRESH_TOKEN,
-        { expiresIn: "7d" } // long-lived
-      );
-
-      // Step 5: Set cookies
-      response.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-      });
-      response.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
-      return response.status(200).json({
-        success: true,
-        message: `🎉 Login was successfully.Welcome back to Qasar ${userExists.email}`,
-        result: userExists,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      });
-    } 
-
-    const newUser = await MentorModel.create({
-      name,
-      email,
-      avatar,
-      user_type,
-    });
-
-    // Step 4: Generate tokens
-    const accessToken = jwt.sign(
-      {
-        user: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        user_type: newUser.user_type, // use detected userType
-      },
-      process.env.SECRET_ACCESS_TOKEN,
-      { expiresIn: "60m" } // short-lived
-    );
-    const refreshToken = jwt.sign(
-      { userId: newUser._id },
-      process.env.SECRET_REFRESH_TOKEN,
-      { expiresIn: "7d" } // long-lived
-    );
-
-    // Step 5: Set cookies
-    response.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    });
-    response.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-
-    response.status(201).json({
-      success: true,
-      message: `🎉 Your account has been created successfully.Welcome to Qasar ${newUser.email}`,
-      result: newUser
-    });
-  } catch (error) {
-    response.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
 
 export const signUp = async (req, res) => {
-  const { email, password, user_type = "mentee" } = req.body;
+  const { email, password, role = "mentee" } = req.body;
 
   try {
     // Step 1: Validate input
@@ -255,7 +55,7 @@ export const signUp = async (req, res) => {
       email,
       password: hashedPassword,
       provider: "local",
-      user_type,
+      role,
     });
     const result = await newUser.save();
 
@@ -267,7 +67,7 @@ export const signUp = async (req, res) => {
       field: null,
       message: "🎉 Your account has been created successfully",
       userId: newUser._id,
-      user_type: newUser.user_type,
+      user_type: newUser.role,
       newUser: result,
     });
   } catch (error) {
@@ -282,7 +82,7 @@ export const signUp = async (req, res) => {
 export default signUp;
 
 export const signUpAsMentor = async (req, res) => {
-  const { email, password, user_type = "mentor" } = req.body;
+  const { email, password, role = "mentor" } = req.body;
 
   try {
     // Step 1: Validate input
@@ -319,7 +119,7 @@ export const signUpAsMentor = async (req, res) => {
 
     // Step 4: Create new mentor
     const newUser = new MentorModel({
-      user_type,
+      role,
       email,
       password: hashedPassword,
       provider: "local",
@@ -334,7 +134,7 @@ export const signUpAsMentor = async (req, res) => {
       field: null,
       message: "🎉 Your mentor account has been created successfully",
       userId: newUser._id,
-      user_type: newUser.user_type,
+      user_type: newUser.role,
       newUser: result,
     });
   } catch (error) {
@@ -347,86 +147,10 @@ export const signUpAsMentor = async (req, res) => {
   }
 };
 
-export const signUpAsInstitution = async (req, res) => {
-  const { email, password, user_type = "institution" } = req.body;
 
-  try {
-    // Step 1: Validate user input
-    const { error } = signUpSchema.validate({ email, password });
-    if (error) {
-      return res.status(400).json({
-        field: error.details[0].context.key,
-        success: false,
-        message: error.details[0].message,
-      });
-    }
-
-    // Step 2: Check if email exists across multiple models
-    const models = [
-      { name: "UserModel", model: UserModel },
-      { name: "MentorModel", model: MentorModel },
-      { name: "CompanyModel", model: CompanyModel },
-      { name: "InstitutionModel", model: InstitutionModel },
-    ];
-
-    for (const { name, model } of models) {
-      const userExists = await model.findOne({ email });
-      if (userExists) {
-        return res.status(409).json({
-          field: "email",
-          success: false,
-          message: `Email already exists in ${name}. Try a different one.`,
-        });
-      }
-    }
-
-    // Step 3: Hash password
-    const hashedPassword = await doHash(password, 12);
-
-    // Step 4: Create institution user
-    const newUser = new InstitutionModel({
-      email,
-      user_type,
-      password: hashedPassword,
-      provider: "local",
-    });
-    const result = await newUser.save();
-
-    // Step 5: Remove password before sending response
-    result.password = undefined;
-
-    // Step 6: Send response
-    return res.status(201).json({
-      success: true,
-      field: null,
-      message: "🎉 Your institution account has been created successfully",
-      userId: newUser._id,
-      user_type: newUser.user_type,
-      newUser: result,
-    });
-  } catch (error) {
-    console.error("SignUpAsInstitution Error:", error);
-    return res.status(500).json({
-      field: null,
-      success: false,
-      message: "Internal server error. Please try again later.",
-    });
-  }
-};
-
-export function isUserloggedIn(req, res) {
-  res.status(200).json({
-    success: true,
-    user: {
-      id: req.user.userId,
-      email: req.user.email,
-      verified: req.user.verified,
-    },
-  });
-}
 
 export const oauthCallbackHandler = async (req, res) => {
-  const { id, email, name, provider, user_type = "mentee" } = req.user;
+  const { id, email, name, provider, role = "mentee" } = req.user;
 
   try {
     if (!email) {
@@ -453,7 +177,7 @@ export const oauthCallbackHandler = async (req, res) => {
           field: null,
           message: `Welcome back! You already have an account in ${name}.`,
           userId: userExists._id,
-          user_type: userExists.user_type,
+          user_type: userExists.role,
           user: userExists,
         });
       }
@@ -465,7 +189,7 @@ export const oauthCallbackHandler = async (req, res) => {
       name,
       provider,
       oauthId: id,
-      user_type,
+      role,
       password: crypto.randomBytes(16).toString("hex"), // random password since OAuth handles login
     });
 
@@ -478,7 +202,7 @@ export const oauthCallbackHandler = async (req, res) => {
       field: null,
       message: "🎉 Your account has been created successfully via OAuth",
       userId: newUser._id,
-      user_type: newUser.user_type,
+      user_type: newUser.role,
       newUser,
     });
 
@@ -494,7 +218,7 @@ export const oauthCallbackHandler = async (req, res) => {
 };
 
 export const oauthCallbackHandlerForSignUpMentor = async (req, res) => {
-  const { id, email, name, provider, user_type = "mentor" } = req.user;
+  const { id, email, name, provider, role = "mentor" } = req.user;
 
   try {
     if (!email) {
@@ -520,7 +244,7 @@ export const oauthCallbackHandlerForSignUpMentor = async (req, res) => {
           field: null,
           message: `Welcome back! You already have an account in ${name}.`,
           userId: userExists._id,
-          user_type: userExists.user_type,
+          user_type: userExists.role,
           user: userExists,
         });
       }
@@ -532,7 +256,7 @@ export const oauthCallbackHandlerForSignUpMentor = async (req, res) => {
       name,
       provider,
       oauthId: id,
-      user_type,
+      role,
       password: crypto.randomBytes(16).toString("hex"), // random password for OAuth
     });
 
@@ -545,7 +269,7 @@ export const oauthCallbackHandlerForSignUpMentor = async (req, res) => {
       field: null,
       message: "🎉 Your mentor account has been created successfully via OAuth",
       userId: newUser._id,
-      user_type: newUser.user_type,
+      user_type: newUser.role,
       newUser,
     });
 
@@ -576,7 +300,7 @@ export async function signIn(req, res) {
 
     // Step 2: Find user across multiple models
     let existingUser = null;
-    let user_type = null;
+    let role = null;
 
     for (const [type, model] of Object.entries({
       user: UserModel,
@@ -587,7 +311,7 @@ export async function signIn(req, res) {
       const found = await model.findOne({ email }).select("+password");
       if (found) {
         existingUser = found;
-        user_type = type;
+        role = type;
         break;
       }
     }
@@ -618,7 +342,7 @@ export async function signIn(req, res) {
       {
         userId: existingUser._id,
         email: existingUser.email,
-        user_type: existingUser.user_type, // use detected userType
+        user_type: existingUser.role, // use detected userType
       },
       process.env.SECRET_ACCESS_TOKEN,
       { expiresIn: "60m" } // short-lived
@@ -651,7 +375,7 @@ export async function signIn(req, res) {
       success: true,
       message: "Logged in successfully",
       userId: existingUser._id,
-      user_type: existingUser.user_type,
+      user_type: existingUser.role,
       email: existingUser.email,
       accessToken: accessToken,
       refreshToken: refreshToken,

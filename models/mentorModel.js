@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String }, // URL to profile image
     name: { type: String }, // URL to profile image
 
-    user_type: {
+    role: {
       type: String,
       // enum: ["mentee", "mentor", "company", "institution"],
       // default: "mentee", // ✅ Uncomment if you want a default role

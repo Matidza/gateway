@@ -104,9 +104,11 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 // only *routes to*, it doesn't own their business logic.
 import authRoutes from "./routes/authRoutes.js";
 import RefreshTokenRoute from "./routes/refreshTokenRoute.js";
+// router.post("/create", requireAuth, authorize("mentee"), menteeRateLimiter({limit: 50, window: 9990}), createMenteeProfile)// rate limit
 
 import { connectRedis } from "../mentee-service/utilities/redis.js";
 import { requireAuth } from "./middlewares/authMiddleware.js";
+import { authorize } from "./middlewares/authorization.js";
 import { createRateLimiter, RATE_LIMITS } from "./middlewares/rateLimiter.js";
 import { SERVICE_URLS } from "./config/services.js";
 
@@ -179,7 +181,7 @@ const startServer = async () => {
     const standardLimiter = createRateLimiter(redisClient, RATE_LIMITS.standard);
 
     // --- Auth (local to the gateway) --------------------------------------
-    app.use("/api/v1/auth", authLimiter, authRoutes);
+    app.use("/api/v1/auth",  authRoutes); 
     app.use("/api/v1/refresh-token", authLimiter, RefreshTokenRoute);
 
     // --- Proxied microservices ---------------------------------------------

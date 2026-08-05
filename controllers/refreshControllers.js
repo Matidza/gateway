@@ -31,7 +31,7 @@ export async function refreshTokenHandler(req, res) {
       {
         userId: user._id,
         email: user.email,
-        user_type: user.user_type,
+        user_type: user.role,
         verified: user.verified,
       },
       process.env.SECRET_ACCESS_TOKEN,

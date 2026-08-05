@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema(
       select: false, // ✅ Hide password from query results
     },
 
-    user_type: {
+    role: {
       type: String,
       enum: ["mentee", "mentor", "company", "institution"],
       // default: "mentee", // ✅ Uncomment if you want a default role
