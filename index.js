@@ -370,7 +370,7 @@ const startServer = async () => {
     const standardLimiter = createRateLimiter(redisClient, RATE_LIMITS.standard);
 
     // --- Auth (local to the gateway) --------------------------------------
-    app.use("/api/v1/auth",  authRoutes); 
+    app.use("/api/v1/auth", authLimiter, authRoutes); 
     app.use("/api/v1/refresh-token", authLimiter, RefreshTokenRoute);
 
     // --- Proxied microservices ---------------------------------------------

@@ -1,6 +1,10 @@
 import crypto from "crypto";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import { 
+  generateAccessToken,
+  generateRefreshToken
+ } from "../utilities/jwt.js";
 
 import UserModel from "../models/menteeModel.js";
 import MentorModel from "../models/mentorModel.js";
@@ -13,34 +17,117 @@ import { signUpSchema, signInSchema } from "../validator/validators.js";
 
 dotenv.config();
 
-export const createUser = async (req, res) => {
-  const { name, email, avatar, role} = req.body;
-  console.log(req.body);
-  try {
-    const userExists = await GatewayUserModel.findOne({ email});
-    if (userExists) return res.status(200).json(userExists);
-    const newUser = await GatewayUserModel.create({
-      name,
-      email,
-      avatar,
-      role
-    })
-    res.status(200).json({
-      success: true,
-      field: null,
-      message: "🎉 Your account has been created successfully",
-      newUser
-    })
-  } catch (error) {
-    console.error("SignIn Error:", error);
-    res.status(500).json({
-      success: false,
-      message: `Internal server error: ${error.message || error}`,
-    });
-  }
+// export const createUser = async (req, res) => {
+//   const { name, email, avatar, role} = req.body;
+//   console.log(req.body);
+  
+//   try {
+//     const userExists = await GatewayUserModel.findOne({ email});
+//     if (userExists) return res.status(200).json(userExists);
+//     const newUser = await GatewayUserModel.create({
+//       name,
+//       email,
+//       avatar,
+//       role
+//     })
+//     res.status(200).json({
+//       success: true,
+//       field: null,
+//       message: "🎉 Your account has been created successfully",
+//       newUser
+//     })
+//   } catch (error) {
+//     console.error("SignIn Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: `Internal server error: ${error.message || error}`,
+//     });
+//   }
 
   
-}
+// }
+export const createUser = async (req, res) => {
+  const { name, email, avatar, role } = req.body;
+
+  try {
+    let user = await GatewayUserModel.findOne({ email });
+
+    if (!user) {
+      user = await GatewayUserModel.create({
+        name,
+        email,
+        avatar,
+        role,
+      });
+    }
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged in successfully",
+      user,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    // Optional: remove the refresh token from the database
+    if (req.user?.id) {
+      await GatewayUserModel.findByIdAndUpdate(req.user.id, {
+        $unset: { refreshToken: "" },
+      });
+    }
+
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 export const signUp = async (req, res) => {
   const { email, password, role = "mentee" } = req.body;

@@ -29,7 +29,7 @@ export const requireAuth = (req, res, next) => {
     req.user = { userId: decoded.userId, role: decoded.role };
 
     // Forwarded to whichever service the gateway proxies this request to.
-    req.headers["x-user-id"] = decoded.userId;
+    req.headers["x-user-id"] = decoded._id;
     req.headers["x-user-role"] = decoded.role;
 
     next();

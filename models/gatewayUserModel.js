@@ -18,6 +18,10 @@ const gatewayUserSchema = new mongoose.Schema(
       enum: ["mentee", "professional", "admin"],
       default: "mentee",
     },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
     verified: {
       type: Boolean,
       default: false,
