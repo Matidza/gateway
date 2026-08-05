@@ -15,6 +15,7 @@ dotenv.config();
 
 export const createUser = async (req, res) => {
   const { name, email, avatar, role} = req.body;
+  console.log(req.body);
   try {
     const userExists = await GatewayUserModel.findOne({ email});
     if (userExists) return res.status(200).json(userExists);

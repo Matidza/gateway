@@ -1,57 +1,31 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema(
+const gatewayUserSchema = new mongoose.Schema(
   {
+    name: {
+      type: String,
+    },
     email: {
       type: String,
-      required: [true, "Email is required!"],
-      trim: true,
-      unique: [true, "Email already exists, please use another email!"],
-      minlength: [5, "Email must be a minimum of 5 characters"],
-      lowercase: true,
+      required: true,
+      unique: true,
     },
-
+    avatar: {
+      type: String,
+    },
     role: {
       type: String,
-      enum: ["mentee", "mentor", "company", "institution",  "admin"],
-      // default: "mentee", // ✅ Uncomment if you want a default role
+      enum: ["mentee", "professional", "admin"],
+      default: "mentee",
     },
-
-    provider: {
-      type: String,
-      enum: ["local", "google"]
-    },
-
     verified: {
       type: Boolean,
       default: false,
     },
-
-    verificationCode: {
-      type: String,
-      select: false,
-    },
-
-    verificationCodeValidation: {
-      type: Number,
-      select: false,
-    },
-
-    forgotPasswordCode: {
-      type: String,
-      select: false,
-    },
-
-    forgotPasswordCodeValidation: {
-      type: Number,
-      select: false,
-    },
   },
   {
-    timestamps: true, // ✅ Adds createdAt and updatedAt fields automatically
+    timestamps: true,
   }
 );
 
-const GatewayUserModel = mongoose.model("GatewayUserModel", userSchema);
-
-export default GatewayUserModel;
+export default mongoose.model("GatewayUserModel", gatewayUserSchema);
