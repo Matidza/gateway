@@ -71,14 +71,15 @@ export const createUser = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      // maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     return res.status(200).json({

@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import jwt from 'jsonwebtoken';
+import GatewayUserModel from "../models/gatewayUserModel.js"
 
 dotenv.config();
 
@@ -18,7 +19,7 @@ export async function refreshTokenHandler(req, res) {
     const payload = jwt.verify(token, process.env.SECRET_REFRESH_TOKEN);
 
     // Fetch user
-    const user = await UserModel.findById(payload.userId);
+    const user = await GatewayUserModel.findById(payload._id);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -28,22 +29,28 @@ export async function refreshTokenHandler(req, res) {
 
     // Create new access token
     const newAccessToken = jwt.sign(
+      // {
+      //   userId: user._id,
+      //   email: user.email,
+      //   user_type: user.role,
+      //   verified: user.verified,
+      // },
       {
-        userId: user._id,
+        id: user._id,
         email: user.email,
-        user_type: user.role,
-        verified: user.verified,
+        role: user.role,
       },
       process.env.SECRET_ACCESS_TOKEN,
-      { expiresIn: "30m" }
+      { expiresIn: "15m" }
     );
-
+    console.log(newAccessToken)
     // Set new cookie
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
       sameSite: "strict",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 30 * 60 * 1000, // 30 minutes
+      // maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     return res.json({

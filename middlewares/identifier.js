@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export function authenticateToken(request, response, next) {
-    const token = request.cookies['accessToken'] || request.headers['authorization']?.split(' ')[1];
+    const token = request.cookies['refreshToken'] || request.headers['authorization']?.split(' ')[1];
     if (!token) {
         return response.status(401)
         .json({

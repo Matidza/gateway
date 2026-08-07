@@ -22,7 +22,7 @@ const gatewayUserSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    verified: {
+    email_verified: {
       type: Boolean,
       default: false,
     },

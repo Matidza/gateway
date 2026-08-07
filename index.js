@@ -273,6 +273,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import mongoose from "mongoose";
+import authenticateToken from "./middlewares/identifier.js";
 
 // Auth stays at the gateway (design doc §3.2: "issued by an auth module,
 // either standalone or part of the gateway"). Everything else — mentee,
@@ -283,7 +284,7 @@ import RefreshTokenRoute from "./routes/refreshTokenRoute.js";
 // router.post("/create", requireAuth, authorize("mentee"), menteeRateLimiter({limit: 50, window: 9990}), createMenteeProfile)// rate limit
 
 import { connectRedis } from "../mentee-service/utilities/redis.js";
-import { requireAuth } from "./middlewares/authMiddleware.js";
+import { requireAuth, requireRole } from "./middlewares/authMiddleware.js";
 import { authorize } from "./middlewares/authorization.js";
 import { createRateLimiter, RATE_LIMITS } from "./middlewares/rateLimiter.js";
 import { SERVICE_URLS } from "./config/services.js";
@@ -344,7 +345,7 @@ app.use((req, res, next) => {
 
 // --- Health check -----------------------------------------------------------
 // Used by the load balancer (design doc §3.1).
-app.get("/health", (req, res) => {
+app.get("/health", requireAuth, requireRole('mentee'), (req, res) => {
   res.json({ status: "ok", service: "gateway", timestamp: new Date().toISOString() });
 });
 
@@ -370,7 +371,7 @@ const startServer = async () => {
     const standardLimiter = createRateLimiter(redisClient, RATE_LIMITS.standard);
 
     // --- Auth (local to the gateway) --------------------------------------
-    app.use("/api/v1/auth", authLimiter, authRoutes); 
+    app.use("/api/v1/auth", authRoutes); 
     app.use("/api/v1/refresh-token", authLimiter, RefreshTokenRoute);
 
     // --- Proxied microservices ---------------------------------------------
@@ -397,19 +398,22 @@ const startServer = async () => {
 
     app.use(
       "/api/v1/mentee",
-      requireAuth,
+      // requireAuth,
+      requireRole('mentee', 'admin'),
       standardLimiter,
       proxyService("Mentee", SERVICE_URLS.mentee)
     );
     app.use(
       "/api/v1/professional",
       requireAuth,
+      requireRole('professional', 'admin'),
       standardLimiter,
       proxyService("Professional", SERVICE_URLS.professional)
     );
     app.use(
       "/api/v1/company",
       requireAuth,
+      requireRole('company', 'admin'),
       standardLimiter,
       proxyService("Company", SERVICE_URLS.company)
     );
@@ -423,6 +427,7 @@ const startServer = async () => {
     // app.use(
     //   "/api/v1/sessions",
     //   requireAuth,
+    //   requireRole('mentee', 'admin', 'professional'),
     //   standardLimiter,
     //   proxyService("Video", SERVICE_URLS.video)
     // );
@@ -430,6 +435,7 @@ const startServer = async () => {
     // app.use(
     //   "/api/v1/video",
     //   requireAuth,
+    //   requireRole('mentee', 'admin', 'professional'),
     //   standardLimiter,
     //   proxyService("Video", SERVICE_URLS.video)
     // );
