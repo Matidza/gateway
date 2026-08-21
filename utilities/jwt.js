@@ -6,8 +6,10 @@ export const generateAccessToken = (user) => {
       id: user._id,
       email: user.email,
       role: user.role,
+      name: user.name,
+      avatar: user.avatar,
     },
-    process.env.SECRET_ACCESS_TOKEN,
+    process.env.ACCESS_TOKEN_SECRET,
     {
       expiresIn: "15m",
     }
@@ -19,7 +21,7 @@ export const generateRefreshToken = (user) => {
     {
       id: user._id,
     },
-    process.env.SECRET_REFRESH_TOKEN,
+    process.env.REFRESH_TOKEN_SECRET,
     {
       expiresIn: "7d",
     }

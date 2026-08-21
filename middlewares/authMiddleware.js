@@ -1,10 +1,7 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.SECRET_ACCESS_TOKEN;
-
 export const requireAuth = (req, res, next) => {
   try {
-    // Prefer the HttpOnly cookie
     const token =
       req.cookies?.accessToken ||
       (req.headers.authorization?.startsWith("Bearer ")
@@ -18,25 +15,23 @@ export const requireAuth = (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
     req.user = {
-      id: decoded._id,
+      id: decoded.id,
       email: decoded.email,
       name: decoded.name,
       avatar: decoded.avatar,
       role: decoded.role,
     };
-    console.log(user)
 
-    // Forward identity to downstream services
-    req.headers["x-user-id"] = decoded._id;
+    req.headers["x-user-id"] = decoded.id;
     req.headers["x-user-email"] = decoded.email;
     req.headers["x-user-role"] = decoded.role;
 
     next();
   } catch (error) {
+    console.error("❌ requireAuth error:", error.message);
     return res.status(401).json({
       success: false,
       message: "Invalid or expired access token",
@@ -53,6 +48,5 @@ export const requireRole =
         message: "Insufficient permissions",
       });
     }
-
     next();
   };

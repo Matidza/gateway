@@ -339,20 +339,20 @@ export const createUser = async (req, res) => {
     let user = await GatewayUserModel.findOne({ email });
     const isNewUser = !user;
 
+    // If this Google account already exists under a different role than
+    // the one selected on the login screen, do NOT create a second
+    // account or switch their role. Log them into their real account and
+    // flag the mismatch so the frontend can tell them, instead of
+    // silently treating "professional" as if it were their role.
+    const roleMismatch = !isNewUser && role && user.role !== role;
+
     if (!user) {
       user = await GatewayUserModel.create({ name, email, avatar, role });
     }
 
-    // Provision the service-side profile BEFORE responding, so it exists
-    // by the time the frontend redirects to the portal and calls
-    // /mentee/dashboard. This is a direct, synchronous internal call
-    // rather than an event — an event/broker (RabbitMQ) would risk the
-    // dashboard load winning a race against event delivery on a brand-new
-    // account, which is exactly the case we can't afford to get wrong on
-    // first impression. If you later add a broker, this can also publish
-    // a `user.created` event for other services (notification, etc.) to
-    // pick up in the background — that would be additive, not a
-    // replacement for this synchronous step.
+    // Provisioning + welcome email stay exactly as they are — both are
+    // already gated on isNewUser, so a roleMismatch login (which is by
+    // definition an existing user) never re-triggers either of them.
     const provisioningUrl = PROVISIONING_ENDPOINTS[role];
     if (isNewUser && provisioningUrl) {
       try {
@@ -362,11 +362,6 @@ export const createUser = async (req, res) => {
           email: user.email,
         });
       } catch (provisionErr) {
-        // Don't fail signup over this — the dashboard handles a missing
-        // profile gracefully (returns profile: null), so a hiccup here
-        // degrades rather than breaks the flow. But it needs to be loud,
-        // since a silent failure here is exactly the bug this was meant
-        // to prevent.
         console.error(
           `❌ Failed to provision ${role} profile for user ${user._id}:`,
           provisionErr.message
@@ -374,11 +369,6 @@ export const createUser = async (req, res) => {
       }
     }
 
-    // Welcome email — only on first creation, never on a repeat login
-    // through this same endpoint. Fire-and-log rather than fire-and-await
-    // in a way that could delay the response: the email isn't required
-    // for the account to function, so a slow or failed send shouldn't
-    // hold up (or break) login the way a failed profile provision could.
     if (isNewUser) {
       sendWelcomeEmail(user).catch((emailErr) => {
         console.error(`❌ Failed to send welcome email to ${user.email}:`, emailErr.message);
@@ -395,20 +385,23 @@ export const createUser = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
+      maxAge: 20 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
+      maxAge: 20 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(200).json({
       success: true,
-      message: "Logged in successfully",
-      user,
+      message: roleMismatch
+        ? `You already have an account registered as a ${user.role}.`
+        : "Logged in successfully",
+      roleMismatch,
+      user, // always the real DB user — user.role is the source of truth
     });
   } catch (error) {
     console.error(error);
