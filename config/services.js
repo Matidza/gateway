@@ -7,7 +7,7 @@
 // internal network.
 
 export const SERVICE_URLS = {
-  mentee: process.env.MENTEE_SERVICE_URL || "http://localhost:5005",
+  mentee: process.env.MENTEE_SERVICE_URL || "http://localhost:4750",
   professional: process.env.PROFESSIONAL_SERVICE_URL || "http://localhost:5002",
   company: process.env.COMPANY_SERVICE_URL || "http://localhost:5003",
   payment: process.env.PAYMENT_SERVICE_URL || "http://localhost:5004",

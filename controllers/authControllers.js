@@ -1,19 +1,11 @@
-import crypto from "crypto";
 import dotenv from "dotenv";
-import jwt from "jsonwebtoken";
-import { 
-  generateAccessToken,
-  generateRefreshToken
- } from "../utilities/jwt.js";
-
-import UserModel from "../models/menteeModel.js";
-import MentorModel from "../models/mentorModel.js";
-import CompanyModel from "../models/companyModel.js";
-import InstitutionModel from "../models/institutionModel.js";
+import sendEmail from "../middlewares/sendEmail.js";
+import { SERVICE_URLS } from "../config/services.js";
 import GatewayUserModel from "../models/gatewayUserModel.js";
+import { callInternalService } from "../utilities/internalServiceClient.js";
+import { generateAccessToken, generateRefreshToken } from "../utilities/jwt.js";
 
-import doHash, { decryptHashedPassword } from "../utilities/hashing.js";
-import { signUpSchema, signInSchema } from "../validator/validators.js";
+
 
 dotenv.config();
 
@@ -46,56 +38,158 @@ dotenv.config();
 
   
 // }
-export const createUser = async (req, res) => {
-  const { name, email, avatar, role } = req.body;
 
-  try {
-    let user = await GatewayUserModel.findOne({ email });
 
-    if (!user) {
-      user = await GatewayUserModel.create({
-        name,
-        email,
-        avatar,
-        role,
-      });
-    }
 
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
 
-    user.refreshToken = refreshToken;
-    await user.save();
 
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      // maxAge: 15 * 60 * 1000, // 15 minutes
-      maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
-    });
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
-    });
+/* ────────────────────────────────────────
+          CREATE/LOGIN USERS
+─────────────────────────────────────────── */
+// export const createUser = async (req, res) => {
+//   const { name, email, avatar, role } = req.body;
 
-    return res.status(200).json({
-      success: true,
-      message: "Logged in successfully",
-      user,
-    });
-  } catch (error) {
-    console.error(error);
+//   try {
+//     let user = await GatewayUserModel.findOne({ email });
 
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+//     if (!user) {
+//       user = await GatewayUserModel.create({
+//         name,
+//         email,
+//         avatar,
+//         role,
+//       });
+//     }
+
+//     const accessToken = generateAccessToken(user);
+//     const refreshToken = generateRefreshToken(user);
+
+//     user.refreshToken = refreshToken;
+//     await user.save();
+
+//     res.cookie("accessToken", accessToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "lax",
+//       // maxAge: 15 * 60 * 1000, // 15 minutes
+//       maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
+//     });
+
+//     res.cookie("refreshToken", refreshToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "lax",
+//       maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Logged in successfully",
+//       user,
+//     });
+//   } catch (error) {
+//     console.error(error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
+
+
+/* ────────────────────────────────────────
+CREATE/LOGIN USERS AUTO CREATE MENTEE PROFILE
+─────────────────────────────────────────── */
+// Where to provision a starter profile, by role. Only mentee is wired up
+// for now — add professional/company here once those services expose
+// their own POST /internal/profiles.
+
+
+// const PROVISIONING_ENDPOINTS = {
+//   mentee: `${SERVICE_URLS.mentee}/internal/profiles`,
+// };
+
+// export const createUser = async (req, res) => {
+//   const { name, email, avatar, role } = req.body;
+
+//   try {
+//     let user = await GatewayUserModel.findOne({ email });
+//     const isNewUser = !user;
+
+//     if (!user) {
+//       user = await GatewayUserModel.create({ name, email, avatar, role });
+//     }
+
+//     // Provision the service-side profile BEFORE responding, so it exists
+//     // by the time the frontend redirects to the portal and calls
+//     // /mentee/dashboard. This is a direct, synchronous internal call
+//     // rather than an event — an event/broker (RabbitMQ) would risk the
+//     // dashboard load winning a race against event delivery on a brand-new
+//     // account, which is exactly the case we can't afford to get wrong on
+//     // first impression. If you later add a broker, this can also publish
+//     // a `user.created` event for other services (notification, etc.) to
+//     // pick up in the background — that would be additive, not a
+//     // replacement for this synchronous step.
+//     const provisioningUrl = PROVISIONING_ENDPOINTS[role];
+//     if (isNewUser && provisioningUrl) {
+//       try {
+//         await callInternalService(provisioningUrl, {
+//           userId: user._id,
+//           name: user.name,
+//           email: user.email,
+//         });
+//       } catch (provisionErr) {
+//         // Don't fail signup over this — the dashboard handles a missing
+//         // profile gracefully (returns profile: null), so a hiccup here
+//         // degrades rather than breaks the flow. But it needs to be loud,
+//         // since a silent failure here is exactly the bug this was meant
+//         // to prevent.
+//         console.error(
+//           `❌ Failed to provision ${role} profile for user ${user._id}:`,
+//           provisionErr.message
+//         );
+//       }
+//     }
+
+//     const accessToken = generateAccessToken(user);
+//     const refreshToken = generateRefreshToken(user);
+
+//     user.refreshToken = refreshToken;
+//     await user.save();
+
+//     res.cookie("accessToken", accessToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "lax",
+//       maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
+//     });
+
+//     res.cookie("refreshToken", refreshToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "lax",
+//       maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Logged in successfully",
+//       user,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
+
+
 
 export const logout = async (req, res) => {
   try {
@@ -130,400 +224,197 @@ export const logout = async (req, res) => {
   }
 };
 
-export const signUp = async (req, res) => {
-  const { email, password, role = "mentee" } = req.body;
 
-  try {
-    // Step 1: Validate input
-    const { error } = signUpSchema.validate({ email, password });
-    if (error) {
-      return res.status(400).json({
-        field: error.details[0].context.key,
-        success: false,
-        message: error.details[0].message,
-      });
-    }
 
-    // Step 2: Check if email exists across multiple models
-    const models = [
-      { name: "UserModel", model: UserModel },
-      { name: "MentorModel", model: MentorModel },
-      { name: "CompanyModel", model: CompanyModel },
-      { name: "InstitutionModel", model: InstitutionModel },
-    ];
 
-    for (const { name, model } of models) {
-      const userExists = await model.findOne({ email });
-      if (userExists) {
-        return res.status(409).json({
-          field: "email",
-          success: false,
-          message: `Email already exists in ${name}. Try a different one.`,
-        });
-      }
-    }
+/* ────────────────────────────────────────
+          SENT EMAIL TO NEW USERS
+─────────────────────────────────────────── */
 
-    // Step 3: Hash the password
-    const hashedPassword = await doHash(password, 12);
 
-    // Step 4: Create new user
-    const newUser = new UserModel({
-      email,
-      password: hashedPassword,
-      provider: "local",
-      role,
-    });
-    const result = await newUser.save();
 
-    result.password = undefined; // Remove password from response
-
-    // Step 5: Send response
-    return res.status(201).json({
-      success: true,
-      field: null,
-      message: "🎉 Your account has been created successfully",
-      userId: newUser._id,
-      user_type: newUser.role,
-      newUser: result,
-    });
-  } catch (error) {
-    console.error("SignUp Error:", error);
-    return res.status(500).json({
-      field: null,
-      success: false,
-      message: "Internal server error. Please try again later.",
-    });
-  }
+const PROVISIONING_ENDPOINTS = {
+  mentee: `${SERVICE_URLS.mentee}/internal/profiles`,
 };
-export default signUp;
 
-export const signUpAsMentor = async (req, res) => {
-  const { email, password, role = "mentor" } = req.body;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-  try {
-    // Step 1: Validate input
-    const { error } = signUpSchema.validate({ email, password });
-    if (error) {
-      return res.status(400).json({
-        field: error.details[0].context.key,
-        success: false,
-        message: error.details[0].message,
-      });
-    }
+// --- inTurn brand tokens (matches Home.tsx / aihome.tsx) --------------------
+const P    = "#7F42E7"; // primary purple
+const PD   = "#5E2EC5"; // primary purple, darker (hover/accent)
+const PL   = "#F0EAFD"; // primary purple, light bg
+const INK  = "#0D0D12"; // headings
+const INK2 = "#4A4A5A"; // body text
+const INK3 = "#8A8AA0"; // muted/footer text
+const BORDER = "#E8E3F5";
+const OFF = "#F7F6FC"; // page bg
+const WHITE = "#FFFFFF";
 
-    // Step 2: Check if email exists across multiple models
-    const models = [
-      { name: "UserModel", model: UserModel },
-      { name: "MentorModel", model: MentorModel },
-      { name: "CompanyModel", model: CompanyModel },
-      { name: "InstitutionModel", model: InstitutionModel },
-    ];
+// Role-specific first stop after signup, so the CTA button lands the
+// person somewhere useful instead of a generic homepage.
+const PORTAL_PATH_BY_ROLE = {
+  mentee: "/mentee/dashboard",
+  professional: "/professional/dashboard",
+  company: "/company/dashboard",
+};
 
-    for (const { name, model } of models) {
-      const userExists = await model.findOne({ email });
-      if (userExists) {
-        return res.status(409).json({
-          field: "email",
-          success: false,
-          message: `Email already exists in ${name}. Try a different one.`,
-        });
-      }
-    }
+/**
+ * Builds the welcome email HTML. Uses table-based layout and inline
+ * styles throughout (no <style> block, no flex/grid) since that's what
+ * reliably renders across Gmail/Outlook/Apple Mail — the same reason
+ * email.js's reset-code email does the same.
+ */
+const buildWelcomeEmailHtml = (user) => {
+  const firstName = (user.name || "there").split(" ")[0];
+  const ctaPath = PORTAL_PATH_BY_ROLE[user.role] || "/dashboard";
 
-    // Step 3: Hash the password
-    const hashedPassword = await doHash(password, 12);
+  return `
+  <div style="background:${OFF};padding:32px 16px;font-family:'DM Sans',Arial,sans-serif;">
+    <div style="max-width:480px;margin:0 auto;background:${WHITE};border:1px solid ${BORDER};border-radius:16px;overflow:hidden;">
 
-    // Step 4: Create new mentor
-    const newUser = new MentorModel({
-      role,
-      email,
-      password: hashedPassword,
-      provider: "local",
-    });
-    const result = await newUser.save();
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,${P},${PD});padding:32px 32px 28px;text-align:center;">
+        <span style="display:inline-block;font-family:Georgia,serif;font-weight:700;font-size:22px;color:${WHITE};letter-spacing:-0.02em;">
+          inTurn
+        </span>
+      </div>
 
-    result.password = undefined; // Remove password before sending back
+      <!-- Body -->
+      <div style="padding:32px;">
+        <h1 style="margin:0 0 12px;font-size:22px;font-weight:800;color:${INK};letter-spacing:-0.01em;">
+          Welcome, ${firstName} 👋
+        </h1>
+        <p style="margin:0 0 20px;font-size:14.5px;line-height:1.7;color:${INK2};">
+          Your inTurn account is ready. Whether it's AI-powered mock interviews, real sessions with
+          industry professionals, or sharpening your CV, we're here to help you land the role you're
+          working toward.
+        </p>
 
-    // Step 5: Send response
-    return res.status(201).json({
-      success: true,
-      field: null,
-      message: "🎉 Your mentor account has been created successfully",
-      userId: newUser._id,
-      user_type: newUser.role,
-      newUser: result,
-    });
-  } catch (error) {
-    console.error("SignUpAsMentor Error:", error);
-    return res.status(500).json({
-      field: null,
-      success: false,
-      message: "Internal server error. Please try again later.",
-    });
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${FRONTEND_URL}${ctaPath}"
+             style="display:inline-block;padding:13px 28px;background:${P};color:${WHITE};
+                    text-decoration:none;border-radius:100px;font-weight:600;font-size:14px;">
+            Go to your dashboard
+          </a>
+        </div>
+
+        <div style="background:${PL};border-radius:12px;padding:18px 20px;margin-top:8px;">
+          <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:${P};">Getting started</p>
+          <p style="margin:0;font-size:13px;line-height:1.7;color:${INK2};">
+            Start an AI mock interview, book time with a professional, or run your CV through our
+            analyzer — your dashboard has all three one click away.
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:20px 32px 28px;border-top:1px solid ${BORDER};text-align:center;">
+        <p style="margin:0;font-size:12px;color:${INK3};">
+          You're receiving this because an account was just created with this email at inTurn.
+        </p>
+      </div>
+    </div>
+  </div>
+  `;
+};
+
+const sendWelcomeEmail = async (user) => {
+  const html = buildWelcomeEmailHtml(user);
+  const result = await sendEmail.sendMail({
+    from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
+    to: user.email,
+    subject: "Welcome to inTurn 🎉",
+    html,
+  });
+
+  if (result.accepted?.[0] !== user.email) {
+    throw new Error("Email provider did not accept the welcome email");
   }
 };
 
-
-
-export const oauthCallbackHandler = async (req, res) => {
-  const { id, email, name, provider, role = "mentee" } = req.user;
+export const createUser = async (req, res) => {
+  const { name, email, avatar, role } = req.body;
 
   try {
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email not found in OAuth profile",
-      });
+    let user = await GatewayUserModel.findOne({ email });
+    const isNewUser = !user;
+
+    if (!user) {
+      user = await GatewayUserModel.create({ name, email, avatar, role });
     }
 
-    // Step 1: Check if email exists across multiple models
-    const models = [
-      { name: "UserModel", model: UserModel },
-      { name: "MentorModel", model: MentorModel },
-      { name: "CompanyModel", model: CompanyModel },
-      { name: "InstitutionModel", model: InstitutionModel },
-    ];
-
-    for (const { name, model } of models) {
-      const userExists = await model.findOne({ email });
-      if (userExists) {
-        // ✅ If found, just return success and don't create duplicate
-        return res.status(200).json({
-          success: true,
-          field: null,
-          message: `Welcome back! You already have an account in ${name}.`,
-          userId: userExists._id,
-          user_type: userExists.role,
-          user: userExists,
+    // Provision the service-side profile BEFORE responding, so it exists
+    // by the time the frontend redirects to the portal and calls
+    // /mentee/dashboard. This is a direct, synchronous internal call
+    // rather than an event — an event/broker (RabbitMQ) would risk the
+    // dashboard load winning a race against event delivery on a brand-new
+    // account, which is exactly the case we can't afford to get wrong on
+    // first impression. If you later add a broker, this can also publish
+    // a `user.created` event for other services (notification, etc.) to
+    // pick up in the background — that would be additive, not a
+    // replacement for this synchronous step.
+    const provisioningUrl = PROVISIONING_ENDPOINTS[role];
+    if (isNewUser && provisioningUrl) {
+      try {
+        await callInternalService(provisioningUrl, {
+          userId: user._id,
+          name: user.name,
+          email: user.email,
         });
+      } catch (provisionErr) {
+        // Don't fail signup over this — the dashboard handles a missing
+        // profile gracefully (returns profile: null), so a hiccup here
+        // degrades rather than breaks the flow. But it needs to be loud,
+        // since a silent failure here is exactly the bug this was meant
+        // to prevent.
+        console.error(
+          `❌ Failed to provision ${role} profile for user ${user._id}:`,
+          provisionErr.message
+        );
       }
     }
 
-    // Step 2: If not found, create a new user in UserModel
-    const newUser = await UserModel.create({
-      email,
-      name,
-      provider,
-      oauthId: id,
-      role,
-      password: crypto.randomBytes(16).toString("hex"), // random password since OAuth handles login
-    });
-
-    // Remove password from response
-    newUser.password = undefined;
-
-    // Step 3: Respond and redirect
-    return res.status(201).json({
-      success: true,
-      field: null,
-      message: "🎉 Your account has been created successfully via OAuth",
-      userId: newUser._id,
-      user_type: newUser.role,
-      newUser,
-    });
-
-    // If you want redirect after JSON response, send token then redirect on frontend
-    // res.redirect("http://localhost:3000/AUTH_MICROSERVICE/signin");
-  } catch (error) {
-    console.error("OAuth Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "OAuth Login failed. Please try again.",
-    });
-  }
-};
-
-export const oauthCallbackHandlerForSignUpMentor = async (req, res) => {
-  const { id, email, name, provider, role = "mentor" } = req.user;
-
-  try {
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email not found in OAuth profile",
+    // Welcome email — only on first creation, never on a repeat login
+    // through this same endpoint. Fire-and-log rather than fire-and-await
+    // in a way that could delay the response: the email isn't required
+    // for the account to function, so a slow or failed send shouldn't
+    // hold up (or break) login the way a failed profile provision could.
+    if (isNewUser) {
+      sendWelcomeEmail(user).catch((emailErr) => {
+        console.error(`❌ Failed to send welcome email to ${user.email}:`, emailErr.message);
       });
     }
 
-    // Step 1: Check if email exists across multiple models
-    const models = [
-      { name: "UserModel", model: UserModel },
-      { name: "MentorModel", model: MentorModel },
-      { name: "CompanyModel", model: CompanyModel },
-      { name: "InstitutionModel", model: InstitutionModel },
-    ];
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    for (const { name, model } of models) {
-      const userExists = await model.findOne({ email });
-      if (userExists) {
-        return res.status(200).json({
-          success: true,
-          field: null,
-          message: `Welcome back! You already have an account in ${name}.`,
-          userId: userExists._id,
-          user_type: userExists.role,
-          user: userExists,
-        });
-      }
-    }
+    user.refreshToken = refreshToken;
+    await user.save();
 
-    // Step 2: If not found, create a new mentor user
-    const newUser = await MentorModel.create({
-      email,
-      name,
-      provider,
-      oauthId: id,
-      role,
-      password: crypto.randomBytes(16).toString("hex"), // random password for OAuth
-    });
-
-    // Remove password before sending response
-    newUser.password = undefined;
-
-    // Step 3: Respond (✅ either redirect OR send JSON, not both)
-    return res.status(201).json({
-      success: true,
-      field: null,
-      message: "🎉 Your mentor account has been created successfully via OAuth",
-      userId: newUser._id,
-      user_type: newUser.role,
-      newUser,
-    });
-
-    // OR if you really want redirect instead of JSON:
-    // return res.redirect("http://localhost:3000/AUTH_MICROSERVICE/signin");
-  } catch (error) {
-    console.error("OAuth Mentor Signup Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "OAuth Login failed. Please try again.",
-    });
-  }
-};
-
-export async function signIn(req, res) {
-  const { email, password } = req.body;
-
-  try {
-    // Step 1: Validate input
-    const { error } = signInSchema.validate({ email, password });
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        field: error.details[0].context.key,
-        message: error.details[0].message,
-      });
-    }
-
-    // Step 2: Find user across multiple models
-    let existingUser = null;
-    let role = null;
-
-    for (const [type, model] of Object.entries({
-      user: UserModel,
-      mentor: MentorModel,
-      company: CompanyModel,
-      institution: InstitutionModel,
-    })) {
-      const found = await model.findOne({ email }).select("+password");
-      if (found) {
-        existingUser = found;
-        role = type;
-        break;
-      }
-    }
-
-    if (!existingUser) {
-      return res.status(401).json({
-        success: false,
-        field: "email",
-        message: "User doesn't exist. Please sign up.",
-      });
-    }
-
-    // Step 3: Check password
-    const isPasswordValid = await decryptHashedPassword(
-      password,
-      existingUser.password
-    );
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        field: "password",
-        message: "Invalid password",
-      });
-    }
-
-    // Step 4: Generate tokens
-    const accessToken = jwt.sign(
-      {
-        userId: existingUser._id,
-        email: existingUser.email,
-        user_type: existingUser.role, // use detected userType
-      },
-      process.env.SECRET_ACCESS_TOKEN,
-      { expiresIn: "60m" } // short-lived
-    );
-
-
-    const refreshToken = jwt.sign(
-      { userId: existingUser._id },
-      process.env.SECRET_REFRESH_TOKEN,
-      { expiresIn: "7d" } // long-lived
-    );
-
-    // Step 5: Set cookies
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      sameSite: "strict",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      sameSite: "lax",
+      maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
     });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      sameSite: "strict",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: "lax",
+      maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
     });
 
-    // Step 6: Send response
-    res.json({
+    return res.status(200).json({
       success: true,
       message: "Logged in successfully",
-      userId: existingUser._id,
-      user_type: existingUser.role,
-      email: existingUser.email,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
+      user,
     });
-
-    // console.log(
-    //   `\nUser: ${existingUser._id}\nType: ${existingUser.user_type}\nAccessToken: ${accessToken}\nRefreshToken: ${refreshToken}`
-    // );
   } catch (error) {
-    console.error("SignIn Error:", error);
-    res.status(500).json({
+    console.error(error);
+    return res.status(500).json({
       success: false,
-      message: `Internal server error: ${error.message || error}`,
+      message: error.message,
     });
   }
-}
-
-export async function signOut(req, res) {
-  res
-    .clearCookie("accessToken", "refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    })
-    .clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    }); //.redirect("http://localhost:3000/AUTH_MICROSERVICE/signup");
-
-  return res.status(200).json({
-    success: true,
-    message: "Logged out successfully",
-  });
-}
+};

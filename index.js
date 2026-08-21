@@ -294,7 +294,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 1000;
 
-const allowedOrigins = (process.env.FRONTEND_URLS || "http://localhost:5173,http://localhost:3000")
+const allowedOrigins = (process.env.FRONTEND_URLS || "http://localhost:5173")
   .split(",")
   .map((o) => o.trim());
 
@@ -397,10 +397,10 @@ const startServer = async () => {
       });
 
     app.use(
-      "/api/v1/mentee",
+      "/api/v1",
       // requireAuth,
-      requireRole('mentee', 'admin'),
-      standardLimiter,
+      // requireRole('mentee', 'admin'),
+      // standardLimiter,
       proxyService("Mentee", SERVICE_URLS.mentee)
     );
     app.use(
@@ -440,7 +440,7 @@ const startServer = async () => {
     //   proxyService("Video", SERVICE_URLS.video)
     // );
 
-    app.get("/", (req, res) => {
+    app.get("/", requireAuth, (req, res) => {
       res.send("inTurn API Gateway is running 🚀");
     });
 

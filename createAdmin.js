@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import readline from "readline";
-import UserModel from "./models/menteeModel.js";
+import GatewayUserModel from "./models/gatewayUserModel.js";
 
 dotenv.config();
 
@@ -12,7 +12,7 @@ const rl = readline.createInterface({
 });
 
 // Database connection + server start
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/Mentee-Service';
+const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/Inturn-Gateway-Service';
 
 async function askQuestion(query) {
   return new Promise((resolve) => rl.question(query, resolve));
@@ -27,28 +27,28 @@ async function createAdmin() {
     });
     console.log("✅ Connected to MongoDB");
 
-    const existingAdmin = await UserModel.findOne({ user_type: "admin" });
+    const existingAdmin = await GatewayUserModel.findOne({ role: "admin" });
     if (existingAdmin) {
       console.log("⚠️ Admin already exists");
       process.exit(0);
     }
 
     const email = await askQuestion("Enter admin email: ");
-    const password = await askQuestion("Enter admin password: ");
+    const name = await askQuestion("Enter admin name: ");
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
-    const admin = new UserModel({
+    const admin = new GatewayUserModel({
       email,
-      password: hashedPassword,
-      user_type: "admin",
+      name: name,
+      role: "admin",
       verified: true,
     });
 
     await admin.save();
     console.log("\n✅ Super Admin created successfully!");
     console.log("📧 Email:", admin.email);
-    console.log("🔑 Password:", hashedPassword);
+    console.log("🔑 Name:", admin.name);
   } catch (error) {
     console.error("❌ Error creating admin:", error);
   } finally {

@@ -11,6 +11,7 @@ export function authenticateToken(request, response, next) {
             success: false
         })
     }
+    
     jwt.verify(token, process.env.SECRET_ACCESS_TOKEN, (err, user) => {
         if (err) {
             return response.status(403)
@@ -19,6 +20,7 @@ export function authenticateToken(request, response, next) {
             });
         }
         request.user = user;
+        console.log(user)
         next();
     });
 }
