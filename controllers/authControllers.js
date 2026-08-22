@@ -385,7 +385,7 @@ export const createUser = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 20 * 24 * 60 * 60 * 1000,
+      maxAge: 15 * 60 * 1000, // 15 minutes, matching the token's actual expiry
     });
 
     res.cookie("refreshToken", refreshToken, {
