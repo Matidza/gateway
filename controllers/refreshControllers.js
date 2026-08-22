@@ -1,9 +1,5 @@
-import dotenv from "dotenv";
-import jwt from 'jsonwebtoken';
-import GatewayUserModel from "../models/gatewayUserModel.js"
-
-dotenv.config();
-
+import jwt from "jsonwebtoken";
+import GatewayUserModel from "../models/gatewayUserModel.js";
 
 export async function refreshTokenHandler(req, res) {
   try {
@@ -15,11 +11,9 @@ export async function refreshTokenHandler(req, res) {
       });
     }
 
-    // Verify refresh token
-    const payload = jwt.verify(token, process.env.SECRET_REFRESH_TOKEN);
+    const payload = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
 
-    // Fetch user
-    const user = await GatewayUserModel.findById(payload._id);
+    const user = await GatewayUserModel.findById(payload.id);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -27,30 +21,23 @@ export async function refreshTokenHandler(req, res) {
       });
     }
 
-    // Create new access token
     const newAccessToken = jwt.sign(
-      // {
-      //   userId: user._id,
-      //   email: user.email,
-      //   user_type: user.role,
-      //   verified: user.verified,
-      // },
       {
         id: user._id,
         email: user.email,
         role: user.role,
+        name: user.name,
+        avatar: user.avatar,
       },
-      process.env.SECRET_ACCESS_TOKEN,
+      process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "15m" }
     );
-    console.log(newAccessToken)
-    // Set new cookie
+
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "lax", // matches the cookie set at login — "strict" here would silently break cross-page refresh navigation
       secure: process.env.NODE_ENV === "production",
-      // maxAge: 15 * 60 * 1000, // 15 minutes
-      maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 15 * 60 * 1000, // 15 minutes, matching the token's actual expiry
     });
 
     return res.json({
