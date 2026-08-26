@@ -1,5 +1,3 @@
-
-
 import dotenv from "dotenv";
 import express from "express";
 import helmet from "helmet";
@@ -139,26 +137,19 @@ const startServer = async () => {
           res.status(503).json({ message: `${name} service unavailable` });
         },
       });
-
-    // --- Public (unauthenticated) mentee endpoints ----------------------------
-    // Guests must be able to browse professionals without a token. Must be
-    // mounted BEFORE the general `/api/v1` block below — Express runs
-    // middleware in registration order, so a match here short-circuits before
-    // reaching requireAuth further down.
     app.use(
-  "/api/v1/mentee/profesionals",   // ← scoped, not the whole /api/v1 prefix
-  standardLimiter,
-  createProxyMiddleware({
-    target: SERVICE_URLS.mentee,
-    changeOrigin: true,
-    onProxyReq: fixRequestBody,
-    onError: (err, req, res) => {
-      console.error("❌ Mentee (public) service proxy error:", err.message);
-      res.status(503).json({ message: "Mentee service unavailable" });
-    },
-  })
-);
-    
+      "/api/v1/mentee/profesionals",   // ← scoped, not the whole /api/v1 prefix
+      standardLimiter,
+      createProxyMiddleware({
+        target: SERVICE_URLS.mentee,
+        changeOrigin: true,
+        onProxyReq: fixRequestBody,
+        onError: (err, req, res) => {
+          console.error("❌ Mentee (public) service proxy error:", err.message);
+          res.status(503).json({ message: "Mentee service unavailable" });
+        },
+      })
+    );
     app.use(
       "/api/v1",
       requireAuth,
@@ -166,6 +157,13 @@ const startServer = async () => {
       standardLimiter,
       proxyService("Mentee", SERVICE_URLS.mentee)
     );
+    // app.use(
+    //   "/api/v1",
+    //   requireAuth,
+    //   requireRole('mentee', 'admin'),
+    //   standardLimiter,
+    //   proxyService("Mentee", SERVICE_URLS.mentee)
+    // );
     app.use(
       "/api/v1/professional",
       requireAuth,
