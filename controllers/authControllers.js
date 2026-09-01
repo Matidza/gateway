@@ -9,187 +9,6 @@ import { generateAccessToken, generateRefreshToken } from "../utilities/jwt.js";
 
 dotenv.config();
 
-// export const createUser = async (req, res) => {
-//   const { name, email, avatar, role} = req.body;
-//   console.log(req.body);
-  
-//   try {
-//     const userExists = await GatewayUserModel.findOne({ email});
-//     if (userExists) return res.status(200).json(userExists);
-//     const newUser = await GatewayUserModel.create({
-//       name,
-//       email,
-//       avatar,
-//       role
-//     })
-//     res.status(200).json({
-//       success: true,
-//       field: null,
-//       message: "🎉 Your account has been created successfully",
-//       newUser
-//     })
-//   } catch (error) {
-//     console.error("SignIn Error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: `Internal server error: ${error.message || error}`,
-//     });
-//   }
-
-  
-// }
-
-
-
-
-
-
-/* ────────────────────────────────────────
-          CREATE/LOGIN USERS
-─────────────────────────────────────────── */
-// export const createUser = async (req, res) => {
-//   const { name, email, avatar, role } = req.body;
-
-//   try {
-//     let user = await GatewayUserModel.findOne({ email });
-
-//     if (!user) {
-//       user = await GatewayUserModel.create({
-//         name,
-//         email,
-//         avatar,
-//         role,
-//       });
-//     }
-
-//     const accessToken = generateAccessToken(user);
-//     const refreshToken = generateRefreshToken(user);
-
-//     user.refreshToken = refreshToken;
-//     await user.save();
-
-//     res.cookie("accessToken", accessToken, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "lax",
-//       // maxAge: 15 * 60 * 1000, // 15 minutes
-//       maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
-//     });
-
-//     res.cookie("refreshToken", refreshToken, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "lax",
-//       maxAge: 20 * 24 * 60 * 60 * 1000, // 7 days
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Logged in successfully",
-//       user,
-//     });
-//   } catch (error) {
-//     console.error(error);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
-
-
-
-/* ────────────────────────────────────────
-CREATE/LOGIN USERS AUTO CREATE MENTEE PROFILE
-─────────────────────────────────────────── */
-// Where to provision a starter profile, by role. Only mentee is wired up
-// for now — add professional/company here once those services expose
-// their own POST /internal/profiles.
-
-
-// const PROVISIONING_ENDPOINTS = {
-//   mentee: `${SERVICE_URLS.mentee}/internal/profiles`,
-// };
-
-// export const createUser = async (req, res) => {
-//   const { name, email, avatar, role } = req.body;
-
-//   try {
-//     let user = await GatewayUserModel.findOne({ email });
-//     const isNewUser = !user;
-
-//     if (!user) {
-//       user = await GatewayUserModel.create({ name, email, avatar, role });
-//     }
-
-//     // Provision the service-side profile BEFORE responding, so it exists
-//     // by the time the frontend redirects to the portal and calls
-//     // /mentee/dashboard. This is a direct, synchronous internal call
-//     // rather than an event — an event/broker (RabbitMQ) would risk the
-//     // dashboard load winning a race against event delivery on a brand-new
-//     // account, which is exactly the case we can't afford to get wrong on
-//     // first impression. If you later add a broker, this can also publish
-//     // a `user.created` event for other services (notification, etc.) to
-//     // pick up in the background — that would be additive, not a
-//     // replacement for this synchronous step.
-//     const provisioningUrl = PROVISIONING_ENDPOINTS[role];
-//     if (isNewUser && provisioningUrl) {
-//       try {
-//         await callInternalService(provisioningUrl, {
-//           userId: user._id,
-//           name: user.name,
-//           email: user.email,
-//         });
-//       } catch (provisionErr) {
-//         // Don't fail signup over this — the dashboard handles a missing
-//         // profile gracefully (returns profile: null), so a hiccup here
-//         // degrades rather than breaks the flow. But it needs to be loud,
-//         // since a silent failure here is exactly the bug this was meant
-//         // to prevent.
-//         console.error(
-//           `❌ Failed to provision ${role} profile for user ${user._id}:`,
-//           provisionErr.message
-//         );
-//       }
-//     }
-
-//     const accessToken = generateAccessToken(user);
-//     const refreshToken = generateRefreshToken(user);
-
-//     user.refreshToken = refreshToken;
-//     await user.save();
-
-//     res.cookie("accessToken", accessToken, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "lax",
-//       maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
-//     });
-
-//     res.cookie("refreshToken", refreshToken, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "lax",
-//       maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Logged in successfully",
-//       user,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
-
-
-
 
 export const logout = async (req, res) => {
   try {
@@ -333,7 +152,7 @@ const sendWelcomeEmail = async (user) => {
 };
 
 export const createUser = async (req, res) => {
-  const { name, email, avatar, role } = req.body;
+  const { name, email, avatar, role, email_verified } = req.body;
 
   try {
     let user = await GatewayUserModel.findOne({ email });
@@ -347,7 +166,7 @@ export const createUser = async (req, res) => {
     const roleMismatch = !isNewUser && role && user.role !== role;
 
     if (!user) {
-      user = await GatewayUserModel.create({ name, email, avatar, role });
+      user = await GatewayUserModel.create({ name, email, avatar, role, email_verified });
     }
 
     // Provisioning + welcome email stay exactly as they are — both are
